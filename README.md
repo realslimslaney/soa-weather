@@ -1,6 +1,13 @@
 # soa-weather
 Sandbox for SOA Weather Research tasks. Not an official codebase of the SOA.
 
+## Documentation
+
+| Guide | Description |
+|---|---|
+| [Getting Started](docs/getting-started.md) | Install prerequisites, clone the repo, and run your first check |
+| [Contributing](docs/contributing.md) | Workflow, code style, and project structure guidelines |
+
 ## Data Sources
 
 - [NOAA Climate Data Online (CDO)](https://www.ncei.noaa.gov/cdo-web/datasets) — primary data source, particularly the GHCN (Global Historical Climatology Network) datasets
