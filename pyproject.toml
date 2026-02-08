@@ -1,0 +1,36 @@
+[project]
+name = "soa-weather"
+version = "0.1.0"
+description = "Weather data analysis for the SOA Weather and Research group"
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "realslimslaney", email = "bslaney7@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "polars",
+]
+
+[project.scripts]
+weather = "soa_weather:main"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.13,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+src = ["src", "scripts"]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
