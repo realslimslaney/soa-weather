@@ -175,12 +175,12 @@ def _parse_stations_csv(station_file: Path) -> pl.DataFrame:
             has_header=False,
             new_columns=_STATION_COLUMNS,
             schema_overrides={
-                "station_id": pl.Utf8,
+                "station_id": pl.String,
                 "latitude": pl.Float64,
                 "longitude": pl.Float64,
                 "elevation": pl.Float64,
-                "state": pl.Utf8,
-                "station_name": pl.Utf8,
+                "state": pl.String,
+                "station_name": pl.String,
             },
         )
         .with_columns(
