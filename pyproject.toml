@@ -1,6 +1,6 @@
 [project]
 name = "soa-weather"
-version = "0.1.0"
+version = "0.2.0"
 description = "Weather data analysis for the SOA Weather and Research group"
 readme = "README.md"
 license = "MIT"
@@ -17,6 +17,7 @@ weather = "soa_weather:main"
 
 [dependency-groups]
 dev = [
+    "pre-commit>=4.5.1",
     "pytest",
     "ruff",
 ]

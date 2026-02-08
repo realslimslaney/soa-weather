@@ -61,10 +61,16 @@ python --version
 
 uv is a fast Python package manager that replaces pip and virtualenv.
 
-Open PowerShell and run:
+**Windows (PowerShell):**
 
 ```powershell
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+**macOS / Linux:**
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 Verify:
@@ -77,13 +83,25 @@ uv --version
 
 just is a command runner (like make, but simpler). We use it for common development tasks.
 
-The easiest way to install on Windows is with winget:
+**Windows:**
 
 ```powershell
 winget install Casey.Just
 ```
 
-Alternatively, use the prebuilt binaries from <https://github.com/casey/just/releases>.
+**macOS:**
+
+```bash
+brew install just
+```
+
+**Linux:**
+
+```bash
+# Debian/Ubuntu
+sudo apt install just
+# or use prebuilt binaries from https://github.com/casey/just/releases
+```
 
 Verify:
 
@@ -98,6 +116,9 @@ With all prerequisites installed, set up the project:
 ```bash
 # Install all dependencies (creates a virtual environment automatically)
 uv sync
+
+# Install pre-commit hooks (runs linting and formatting on each commit)
+just install-hooks
 
 # Verify everything works
 just check
