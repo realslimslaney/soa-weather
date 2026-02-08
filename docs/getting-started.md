@@ -83,10 +83,24 @@ uv --version
 
 just is a command runner (like make, but simpler). We use it for common development tasks.
 
-**Windows:**
+**Windows (pick one):**
+
+Chocolatey:
+
+```powershell
+choco install just
+```
+
+WinGet (built into Windows 11):
 
 ```powershell
 winget install Casey.Just
+```
+
+Scoop:
+
+```powershell
+scoop install just
 ```
 
 **macOS:**
@@ -125,6 +139,24 @@ just check
 ```
 
 This will lint, format-check, and run the test suite.
+
+## Data Directory
+
+By default, weather data is stored at `C:/Data/SOA_Weather` on Windows and `~/Data/SOA_Weather` on macOS/Linux. The folder is created automatically the first time you run a script.
+
+To use a custom location, copy `.env.example` to `.env` and set your path:
+
+```bash
+cp .env.example .env
+# then edit .env and uncomment/set SOA_WEATHER_DATA
+```
+
+Or set the environment variable directly:
+
+```bash
+export SOA_WEATHER_DATA=/path/to/your/data   # macOS/Linux
+set SOA_WEATHER_DATA=D:\your\data             # Windows
+```
 
 ## Running Scripts
 
