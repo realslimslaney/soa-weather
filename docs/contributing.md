@@ -43,7 +43,7 @@ Then open a PR on GitHub. Fill out the PR template.
 
 | Directory | Purpose |
 |---|---|
-| `src/weather/` | Shared package — importable modules and utilities |
+| `src/soa_weather/` | Shared package — importable modules and utilities |
 | `scripts/` | Analysis scripts — each script is a standalone entry point |
 | `tests/` | Test suite — run with `just test` |
 | `docs/` | Documentation |

@@ -32,3 +32,15 @@ install-hooks:
 # Sync dependencies
 sync:
     uv sync
+
+# Serve docs locally with live reload
+docs-serve:
+    uv run mkdocs serve
+
+# Build docs to site/ directory
+docs-build:
+    uv run mkdocs build --strict
+
+# Deploy docs to GitHub Pages (manual fallback)
+docs-deploy:
+    uv run mkdocs gh-deploy --force

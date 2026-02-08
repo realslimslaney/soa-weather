@@ -168,6 +168,7 @@ uv run python scripts/read_station_data.py
 
 ## Next Steps
 
-- Read [contributing.md](contributing.md) for workflow guidelines
+- Read the [Contributing Guide](contributing.md) for workflow guidelines
 - Explore the `scripts/` folder for existing analyses
+- Browse the [API Reference](api/index.md) for module documentation
 - Check the [NOAA CDO datasets page](https://www.ncei.noaa.gov/cdo-web/datasets) for available weather data
