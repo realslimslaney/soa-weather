@@ -78,11 +78,13 @@ nav:
   - User Guide:
       - Overview: guide/overview.md
       - Data Sources: guide/data-sources.md
+      - GHCN-Daily Pipeline: guide/ghcn-daily-pipeline.md
       - Configuration: guide/configuration.md
   - API Reference:
       - api/index.md
       - soa_weather.main: api/main.md
       - soa_weather.read: api/read.md
+      - soa_weather.clean: api/clean.md
       - soa_weather.write: api/write.md
       - soa_weather.validate: api/validate.md
       - soa_weather.schema: api/schema.md

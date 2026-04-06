@@ -37,6 +37,39 @@ After processing, station data follows this schema:
 | `country_code` | String | Two-letter country code |
 | `country_name` | String | Full country name |
 
+## Observation Data Schema (``.dly`` files)
+
+Each `.dly` file contains all historical daily observations for one station.
+Use `parse_dly` (single file) or `load_station_observations` (multiple stations) to
+read them into a long-format DataFrame.
+
+Fixed-width layout per record line (1-based column numbers):
+
+| Field | Columns | Description |
+|---|---|---|
+| Station ID | 1–11 | GHCN station identifier |
+| Year | 12–15 | 4-digit year |
+| Month | 16–17 | 2-digit month |
+| Element | 18–21 | Observation type (e.g. `TMAX`, `TMIN`, `PRCP`) |
+| Value 1–31 | repeating | 5-char integer; **-9999** = missing |
+| MFlag 1–31 | +5 | Measurement flag (1 char) |
+| QFlag 1–31 | +6 | Quality assurance flag (1 char) |
+| SFlag 1–31 | +7 | Source flag (1 char) |
+
+Each day block is 8 characters wide (5 + 1 + 1 + 1), starting at column 22.
+
+After parsing, output follows `OBSERVATIONS_SCHEMA`:
+
+| Column | Type | Description |
+|---|---|---|
+| `station_id` | String | GHCN station identifier |
+| `date` | Date | Calendar date (invalid dates like Feb 30 are dropped) |
+| `element` | String | Observation type |
+| `value` | Int32 | Raw integer value (tenths of °C for TMAX/TMIN; tenths of mm for PRCP) |
+| `mflag` | String | Measurement flag |
+| `qflag` | String | Quality assurance flag |
+| `sflag` | String | Source flag |
+
 ## Links
 
 - [NOAA CDO Datasets](https://www.ncei.noaa.gov/cdo-web/datasets)

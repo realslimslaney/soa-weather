@@ -1,0 +1,79 @@
+# Storm Kristin, Portugal, January 2026
+
+## Setup
+
+```{python imports}
+from datetime import date
+
+import polars as pl
+from soa_weather.clean import clean_ghcn_daily_observations, filter_ghcn_quality_flags
+from soa_weather.read import load_station_observations, pivot_observations
+from soa_weather.utils import data_dir
+```
+
+```{python global variables}
+DATA_DIR = data_dir()
+DLY_SUBDIR = DATA_DIR / "ghcnd_all"
+
+area_dict = {"north": 45.0, "west": -15.0, "south": 35.0, "east": 5.0}
+date_start = date(2026, 1, 25)
+date_end = date(2026, 1, 31)
+```
+
+## Station Metadata
+
+```{python read stations}
+station_df = pl.read_csv(
+    source=DATA_DIR / "stations_output.csv", infer_schema_length=1_000_000
+)  # exported by scripts/read_ghcn_daily.py
+```
+
+```{python filter stations}
+filtered_stations = station_df.filter(
+    (pl.col("latitude") >= area_dict["south"])
+    & (pl.col("latitude") <= area_dict["north"])
+    & (pl.col("longitude") >= area_dict["west"])
+    & (pl.col("longitude") <= area_dict["east"])
+)
+station_ids = filtered_stations["station_id"].to_list()
+filtered_stations
+```
+
+## Observations
+
+```{python load observations}
+obs = load_station_observations(station_ids, DLY_SUBDIR)
+obs
+```
+
+```{python clean observations}
+obs = filter_ghcn_quality_flags(obs)
+obs = clean_ghcn_daily_observations(obs, system="metric")
+obs
+```
+
+## Precipitation (wide format)
+
+```{python pivot precipitation}
+prcp_wide = pivot_observations(
+    obs,
+    element="PRCP",
+    date_start=date_start,
+    date_end=date_end,
+    completeness_threshold=0.9,
+)
+prcp_wide
+```
+
+## Temperature (wide format)
+
+```{python pivot tmax}
+tmax_wide = pivot_observations(
+    obs,
+    element="TMAX",
+    date_start=date_start,
+    date_end=date_end,
+    completeness_threshold=0.9,
+)
+tmax_wide
+```

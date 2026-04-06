@@ -1,6 +1,6 @@
 """Schemas for common datasets to validate the data and to provide metadata for the datasets."""
 
-from polars import Float64, Int64, Schema, String
+from polars import Date, Float64, Int64, Schema, String
 
 COUNTRIES_SCHEMA = Schema(
     {
@@ -19,5 +19,17 @@ STATIONS_SCHEMA = Schema(
         "latitude": Float64,
         "longitude": Float64,
         "elevation": Int64,
+    }
+)
+
+OBSERVATIONS_SCHEMA = Schema(
+    {
+        "station_id": String,
+        "date": Date,
+        "element": String,
+        "value": Int64,
+        "mflag": String,
+        "qflag": String,
+        "sflag": String,
     }
 )
