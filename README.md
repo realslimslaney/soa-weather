@@ -15,10 +15,14 @@ Sandbox for SOA Weather Research tasks. Not an official codebase of the SOA.
 ## Project Structure
 
 ```
-src/soa_weather/  # Importable package (import soa_weather)
-scripts/         # Runnable analysis scripts
-tests/           # Tests
-docs/            # Documentation
+src/soa_weather/              # Importable package (import soa_weather)
+scripts/
+├── read_ghcn_daily.py        # GHCN-Daily station data download & export
+├── read_era5.py              # ERA5 reanalysis data reader
+└── texas_floods_example.py   # Example analysis script
+quarto/                       # Quarto documents and reports
+tests/                        # Tests
+docs/                         # Documentation
 ```
 
 ## Getting Started

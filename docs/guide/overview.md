@@ -16,6 +16,7 @@ The main pipeline (`weather` CLI command or `soa_weather.main.main()`) performs 
 |---|---|
 | [`main`](../api/main.md) | CLI entry point orchestrating the full pipeline |
 | [`read`](../api/read.md) | Downloading, extracting, and parsing GHCN data files |
+| [`clean`](../api/clean.md) | Unit conversion and quality flag filtering |
 | [`write`](../api/write.md) | Writing DataFrames to disk |
 | [`validate`](../api/validate.md) | Schema validation for Polars DataFrames |
 | [`schema`](../api/schema.md) | Polars Schema definitions for standard datasets |

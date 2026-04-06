@@ -4,7 +4,7 @@ import logging
 import time
 
 from soa_weather.config import setup_logging
-from soa_weather.read import check_and_download, load_countries, load_stations
+from soa_weather.read import check_and_download, extract_txt_files, load_countries, load_stations
 from soa_weather.utils import data_dir
 from soa_weather.write import write_stations_csv
 
@@ -20,6 +20,7 @@ STATION_LIST_FILE = DATA_DIR / "ghcnd-stations.txt"
 COUNTRY_LOOKUP_FILE = DATA_DIR / "ghcnd-countries.txt"
 TAR_FILE = DATA_DIR / "ghcnd_all.tar.gz"
 DLY_SUBDIR = DATA_DIR / "ghcnd_all"
+UNZIPPED_DIR = DATA_DIR / "ghcnd_all_unzipped"
 OUTPUT_FILE = DATA_DIR / "stations_output.csv"
 
 FILES_TO_DOWNLOAD = [
@@ -42,6 +43,9 @@ if __name__ == "__main__":
 
     # Download & extract (skips anything already present)
     check_and_download(BASE_URL, DATA_DIR, FILES_TO_DOWNLOAD, TAR_FILE, DLY_SUBDIR)
+
+    # Extract .txt files from the tar.gz into a flat folder
+    extract_txt_files(TAR_FILE, UNZIPPED_DIR)
 
     # Build station list
     log.info("Loading country lookup...")
