@@ -1,6 +1,7 @@
 # SOA Weather — common development tasks
 
 set windows-shell := ["powershell", "-NoProfile", "-Command"]
+set dotenv-load
 
 # List available recipes
 default:
@@ -44,3 +45,11 @@ docs-build:
 # Deploy docs to GitHub Pages (manual fallback)
 docs-deploy:
     uv run mkdocs gh-deploy --force
+
+# Preview Storm Kristin Quarto report (live reload server)
+quarto-preview:
+    $env:QUARTO_PYTHON = ".venv\Scripts\python.exe"; quarto preview quarto\portugal_storm_kristin.qmd --no-browser --no-watch-inputs
+
+# Render Storm Kristin Quarto report to HTML
+storm-kristin:
+    $env:QUARTO_PYTHON = ".venv\Scripts\python.exe"; quarto render quarto\portugal_storm_kristin.qmd
