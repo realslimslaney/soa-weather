@@ -107,6 +107,7 @@ obs = clean_ghcn_daily_observations(obs, system="metric")
         qflag="Q Flag",
         sflag="S Flag",
     )
+    .fmt_number(columns=["value"], decimals=1)
     .tab_style(style=style.css("white-space: nowrap;"), locations=loc.column_labels())
 )
 ```
