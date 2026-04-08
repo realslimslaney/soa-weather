@@ -1,34 +1,42 @@
 # Storm Kristin, Portugal, January 2026
 
-## Setup
+Storm Kristin made landfall on the Iberian Peninsula in late January 2026, bringing significant precipitation to Portugal and Spain. This report summarizes station-level precipitation and temperature data from NOAA's [Global Historical Climatology Network – Daily (GHCN-D)](https://www.ncei.noaa.gov/pub/data/ghcn/daily/) for stations within a bounding box covering the Iberian Peninsula and surrounding region (35–45°N, 15°W–5°E).
 
 ```{python imports}
 from datetime import date
 
 import polars as pl
+from great_tables import GT, style, loc
 from soa_weather.clean import clean_ghcn_daily_observations, filter_ghcn_quality_flags
 from soa_weather.read import load_station_observations, pivot_observations
 from soa_weather.utils import data_dir
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
+import numpy as np
 ```
 
-```{python global variables}
+```{python global-variables}
 DATA_DIR = data_dir()
 DLY_SUBDIR = DATA_DIR / "ghcnd_all"
-
 area_dict = {"north": 45.0, "west": -15.0, "south": 35.0, "east": 5.0}
 date_start = date(2026, 1, 25)
 date_end = date(2026, 1, 31)
+data_completeness_min = 0.0  # minimum fraction of days a station must report (0.0–1.0)
 ```
 
 ## Station Metadata
 
-```{python read stations}
+Station metadata is sourced from NOAA's `ghcnd-stations.txt`, pre-processed by `scripts/read_ghcn_daily.py` and stored locally as `stations_output.csv`. Stations are filtered to those with `.dly` observation files on disk and falling within the bounding box.
+
+```{python read-stations}
 station_df = pl.read_csv(
     source=DATA_DIR / "stations_output.csv", infer_schema_length=1_000_000
-)  # exported by scripts/read_ghcn_daily.py
+)
 ```
 
-```{python filter stations}
+```{python filter-stations}
 filtered_stations = station_df.filter(
     (pl.col("latitude") >= area_dict["south"])
     & (pl.col("latitude") <= area_dict["north"])
@@ -36,44 +44,434 @@ filtered_stations = station_df.filter(
     & (pl.col("longitude") <= area_dict["east"])
 )
 station_ids = filtered_stations["station_id"].to_list()
-filtered_stations
+```
+
+```{python show-stations}
+(
+    GT(filtered_stations.head(10))
+    .tab_header(
+        title="Station Metadata (first 10 rows)",
+        subtitle=f"{len(station_ids):,} stations in bounding box",
+    )
+    .cols_label(
+        country_code="Code",
+        country_name="Country",
+        state="State",
+        station_id="Station ID",
+        station_name="Station Name",
+        latitude="Lat",
+        longitude="Lon",
+        elevation="Elev (m)",
+    )
+    .fmt_number(columns=["latitude", "longitude"], decimals=2)
+    .tab_style(style=style.css("white-space: nowrap;"), locations=loc.column_labels())
+)
 ```
 
 ## Observations
 
-```{python load observations}
+Observations are loaded from GHCN-D `.dly` files — one file per station. Each file contains daily measurements for all recorded elements (precipitation, max/min temperature, snow depth, etc.) across the full station history. Quality-flagged records are removed and values are converted to metric units (precipitation in mm, temperature in °C).
+
+```{python load-observations}
 obs = load_station_observations(station_ids, DLY_SUBDIR)
-obs
 ```
 
-```{python clean observations}
+```{python clean-observations}
 obs = filter_ghcn_quality_flags(obs)
 obs = clean_ghcn_daily_observations(obs, system="metric")
-obs
 ```
 
-## Precipitation (wide format)
+```{python show-obs}
+(
+    GT(
+        obs.join(
+            filtered_stations.select(["station_id", "station_name", "country_name"]),
+            on="station_id",
+            how="left",
+        )
+        .select(["station_id", "station_name", "country_name", "date", "element", "value", "mflag", "qflag", "sflag"])
+        .head(10)
+    )
+    .tab_header(
+        title="Observations (first 10 rows)",
+        subtitle="Long format — one row per station × date × element",
+    )
+    .cols_label(
+        station_id="Station ID",
+        station_name="Station",
+        country_name="Country",
+        date="Date",
+        element="Element",
+        value="Value",
+        mflag="M Flag",
+        qflag="Q Flag",
+        sflag="S Flag",
+    )
+    .tab_style(style=style.css("white-space: nowrap;"), locations=loc.column_labels())
+)
+```
 
-```{python pivot precipitation}
+## Precipitation
+
+Daily precipitation (PRCP) is pivoted to wide format: one row per station, one column per calendar date. Only stations reporting on ≥`{python} int(data_completeness_min * 100)`% of days in the analysis window are retained.
+
+```{python pivot-precipitation}
 prcp_wide = pivot_observations(
     obs,
     element="PRCP",
     date_start=date_start,
     date_end=date_end,
-    completeness_threshold=0.9,
+    completeness_threshold=data_completeness_min,
 )
-prcp_wide
 ```
 
-## Temperature (wide format)
+```{python show-prcp-wide}
+_prcp_date_cols = [c for c in prcp_wide.columns if c not in ["station_id", "data_complete_pct"]]
+(
+    GT(
+        prcp_wide.join(
+            filtered_stations.select(["station_id", "station_name", "country_name"]),
+            on="station_id",
+            how="left",
+        )
+        .select(["station_id", "station_name", "country_name", "data_complete_pct", *_prcp_date_cols])
+        .head(10)
+    )
+    .tab_header(
+        title="Precipitation — Wide Format (first 10 rows)",
+        subtitle=f"Values in mm; minimum completeness threshold: {int(data_completeness_min * 100)}%",
+    )
+    .cols_label(
+        station_id="Station ID",
+        station_name="Station",
+        country_name="Country",
+        data_complete_pct="Completeness",
+    )
+    .fmt_percent(columns=["data_complete_pct"], decimals=0)
+    .fmt_number(columns=_prcp_date_cols, decimals=1)
+    .tab_style(style=style.css("white-space: nowrap;"), locations=loc.column_labels())
+)
+```
 
-```{python pivot tmax}
+## Temperature
+
+Max temperature (TMAX) is pivoted using the same approach, with the same ≥`{python} int(data_completeness_min * 100)`% completeness threshold.
+
+```{python pivot-tmax}
 tmax_wide = pivot_observations(
     obs,
     element="TMAX",
     date_start=date_start,
     date_end=date_end,
-    completeness_threshold=0.9,
+    completeness_threshold=data_completeness_min,
 )
-tmax_wide
+```
+
+```{python show-tmax-wide}
+_tmax_date_cols = [c for c in tmax_wide.columns if c not in ["station_id", "data_complete_pct"]]
+(
+    GT(
+        tmax_wide.join(
+            filtered_stations.select(["station_id", "station_name", "country_name"]),
+            on="station_id",
+            how="left",
+        )
+        .select(["station_id", "station_name", "country_name", "data_complete_pct", *_tmax_date_cols])
+        .head(10)
+    )
+    .tab_header(
+        title="Max Temperature — Wide Format (first 10 rows)",
+        subtitle=f"Values in °C; minimum completeness threshold: {int(data_completeness_min * 100)}%",
+    )
+    .cols_label(
+        station_id="Station ID",
+        station_name="Station",
+        country_name="Country",
+        data_complete_pct="Completeness",
+    )
+    .fmt_percent(columns=["data_complete_pct"], decimals=0)
+    .fmt_number(columns=_tmax_date_cols, decimals=0)
+    .tab_style(style=style.css("white-space: nowrap;"), locations=loc.column_labels())
+)
+```
+
+## Data Preparation
+
+Precipitation totals are summed across the analysis window and joined with station coordinates and country metadata for mapping and analysis.
+
+```{python prep-map-data}
+date_cols = [c for c in prcp_wide.columns if c not in ["station_id", "data_complete_pct"]]
+
+prcp_map = (
+    prcp_wide.with_columns(pl.sum_horizontal([pl.col(c) for c in date_cols]).alias("total_prcp"))
+    .select(["station_id", "total_prcp", *date_cols])
+    .join(
+        filtered_stations.select(
+            ["station_id", "latitude", "longitude", "station_name", "country_code", "country_name"]
+        ),
+        on="station_id",
+    )
+    .filter(pl.col("total_prcp").is_not_null())
+)
+```
+
+```{python show-prcp-map}
+(
+    GT(
+        prcp_map.select(["station_id", "station_name", "country_name", "total_prcp", *date_cols])
+        .head(10)
+    )
+    .tab_header(
+        title="Precipitation Map Data (first 10 rows)",
+        subtitle=f"Total and daily precipitation (mm), {date_start.strftime('%b %d')}–{date_end.strftime('%b %d, %Y')}",
+    )
+    .cols_label(
+        station_id="Station ID",
+        station_name="Station",
+        country_name="Country",
+        total_prcp="Total (mm)",
+    )
+    .fmt_number(columns=["total_prcp", *date_cols], decimals=1)
+    .tab_style(style=style.css("white-space: nowrap;"), locations=loc.column_labels())
+)
+```
+
+## Summary Statistics
+
+```{python stations-by-country}
+stations_by_country = (
+    filtered_stations.group_by("country_name", "country_code")
+    .agg(pl.len().alias("station_count"))
+    .sort("station_count", descending=True)
+)
+(
+    GT(stations_by_country)
+    .tab_header(title="Stations in Bounding Box by Country")
+    .cols_label(country_name="Country", country_code="Code", station_count="Stations")
+    .tab_style(style=style.css("white-space: nowrap;"), locations=loc.column_labels())
+)
+```
+
+```{python prcp-summary-by-country}
+country_prcp = (
+    prcp_map.group_by("country_name", "country_code")
+    .agg(
+        pl.len().alias("reporting_stations"),
+        pl.col("total_prcp").median().round(1).alias("median_total_mm"),
+        pl.col("total_prcp").min().round(1).alias("min_total_mm"),
+        pl.col("total_prcp").max().round(1).alias("max_total_mm"),
+    )
+    .sort("median_total_mm", descending=True)
+)
+(
+    GT(country_prcp)
+    .tab_header(
+        title="Total Precipitation by Country",
+        subtitle=f"{date_start.strftime('%b %d')}–{date_end.strftime('%b %d, %Y')}",
+    )
+    .cols_label(
+        country_name="Country",
+        country_code="Code",
+        reporting_stations="Stations",
+        median_total_mm="Median (mm)",
+        min_total_mm="Min (mm)",
+        max_total_mm="Max (mm)",
+    )
+    .fmt_number(columns=["median_total_mm", "min_total_mm", "max_total_mm"], decimals=1)
+    .tab_style(style=style.css("white-space: nowrap;"), locations=loc.column_labels())
+)
+```
+
+```{python daily-prcp-stats}
+daily_stats = pl.DataFrame(
+    {
+        "date": date_cols,
+        "mean_mm": [round(prcp_map[c].mean() or 0.0, 1) for c in date_cols],
+        "median_mm": [round(prcp_map[c].median() or 0.0, 1) for c in date_cols],
+        "max_mm": [round(prcp_map[c].max() or 0.0, 1) for c in date_cols],
+    }
+)
+(
+    GT(daily_stats)
+    .tab_header(title="Daily Precipitation Statistics — All Reporting Stations")
+    .cols_label(date="Date", mean_mm="Mean (mm)", median_mm="Median (mm)", max_mm="Max (mm)")
+    .fmt_number(columns=["mean_mm", "median_mm", "max_mm"], decimals=1)
+    .tab_style(style=style.css("white-space: nowrap;"), locations=loc.column_labels())
+)
+```
+
+```{python export-filtered}
+#| include: false
+import pathlib
+
+output_dir = pathlib.Path("data")
+output_dir.mkdir(parents=True, exist_ok=True)
+export_path = output_dir / f"storm_kristin_prcp_{date_start}_{date_end}.csv"
+prcp_map.write_csv(export_path)
+```
+
+## Visualizations
+
+```{python total-precip-map}
+colors = ["lightgreen", "green", "yellow", "orange", "red", "darkred"]
+cmap = mcolors.LinearSegmentedColormap.from_list("precip_cmap", colors)
+
+lons = prcp_map["longitude"].to_numpy()
+lats = prcp_map["latitude"].to_numpy()
+totals = prcp_map["total_prcp"].to_numpy()
+vmax = float(np.nanpercentile(totals, 98))
+
+proj = ccrs.PlateCarree()
+fig, ax = plt.subplots(1, 1, figsize=(10, 8), subplot_kw={"projection": proj})
+
+scatter = ax.scatter(
+    lons,
+    lats,
+    c=totals,
+    cmap=cmap,
+    vmin=0,
+    vmax=vmax,
+    s=60,
+    edgecolors="black",
+    linewidths=0.5,
+    transform=ccrs.PlateCarree(),
+    zorder=5,
+)
+
+ax.add_feature(cfeature.OCEAN, facecolor="lightsteelblue", zorder=0)
+ax.add_feature(cfeature.LAND, facecolor="whitesmoke", edgecolor="black", zorder=0.5)
+ax.add_feature(cfeature.COASTLINE, linewidth=0.8, zorder=2)
+ax.add_feature(cfeature.BORDERS, linewidth=0.6, edgecolor="gray", zorder=2)
+ax.set_extent([-15, 5, 35, 45], ccrs.PlateCarree())
+
+cbar = plt.colorbar(scatter, ax=ax, shrink=0.7, pad=0.04)
+cbar.set_label("Total Precipitation (mm)", fontsize=11)
+ax.set_title(
+    f"Storm Kristin — Total Precipitation\n"
+    f"{date_start.strftime('%b %d')}–{date_end.strftime('%b %d, %Y')}",
+    fontsize=14,
+)
+plt.tight_layout()
+plt.show()
+```
+
+```{python peak-day-map}
+daily_means = {c: (prcp_map[c].mean() or 0.0) for c in date_cols}
+peak_col = max(daily_means, key=daily_means.get)
+peak_date = date.fromisoformat(peak_col)
+
+peak_data = prcp_map.filter(pl.col(peak_col).is_not_null())
+lons_pk = peak_data["longitude"].to_numpy()
+lats_pk = peak_data["latitude"].to_numpy()
+vals_pk = peak_data[peak_col].to_numpy()
+vmax_pk = float(np.nanpercentile(vals_pk, 98))
+
+fig, ax = plt.subplots(1, 1, figsize=(10, 8), subplot_kw={"projection": proj})
+
+scatter_pk = ax.scatter(
+    lons_pk,
+    lats_pk,
+    c=vals_pk,
+    cmap=cmap,
+    vmin=0,
+    vmax=vmax_pk,
+    s=60,
+    edgecolors="black",
+    linewidths=0.5,
+    transform=ccrs.PlateCarree(),
+    zorder=5,
+)
+
+ax.add_feature(cfeature.OCEAN, facecolor="lightsteelblue", zorder=0)
+ax.add_feature(cfeature.LAND, facecolor="whitesmoke", edgecolor="black", zorder=0.5)
+ax.add_feature(cfeature.COASTLINE, linewidth=0.8, zorder=2)
+ax.add_feature(cfeature.BORDERS, linewidth=0.6, edgecolor="gray", zorder=2)
+ax.set_extent([-15, 5, 35, 45], ccrs.PlateCarree())
+
+cbar_pk = plt.colorbar(scatter_pk, ax=ax, shrink=0.7, pad=0.04)
+cbar_pk.set_label("Precipitation (mm)", fontsize=11)
+ax.set_title(
+    f"Storm Kristin — Peak Day Precipitation\n{peak_date.strftime('%B %d, %Y')}",
+    fontsize=14,
+)
+plt.tight_layout()
+plt.show()
+```
+
+```{python top-stations-bar}
+num_top = 10
+top_stations = (
+    prcp_map.sort("total_prcp", descending=True)
+    .head(num_top)
+    .with_columns(pl.col("station_name").str.slice(0, 25).alias("label"))
+    .to_pandas()
+)
+
+fig, ax = plt.subplots(figsize=(12, 7))
+bars = ax.bar(top_stations["label"], top_stations["total_prcp"], color="royalblue")
+
+for bar in bars:
+    yval = bar.get_height()
+    ax.text(
+        bar.get_x() + bar.get_width() / 2,
+        yval * 0.8,
+        f"{yval:.1f}",
+        ha="center",
+        va="center",
+        color="white",
+        fontsize=10,
+        fontweight="bold",
+    )
+
+ax.set_xlabel("Station", fontsize=12)
+ax.set_ylabel("Total Precipitation (mm)", fontsize=12)
+ax.set_title(
+    f"Top {num_top} Stations by Total Precipitation — Storm Kristin\n"
+    f"{date_start.strftime('%b %d')}–{date_end.strftime('%b %d, %Y')}",
+    fontsize=14,
+)
+plt.xticks(rotation=45, ha="right", fontsize=9)
+plt.yticks(fontsize=10)
+plt.grid(axis="y", linestyle="--", alpha=0.7)
+plt.tight_layout()
+plt.show()
+```
+
+```{python daily-bar}
+daily_vals = [(c, prcp_map[c].mean() or 0.0) for c in date_cols]
+day_labels = [date.fromisoformat(c).strftime("%b %d") for c, _ in daily_vals]
+day_means = [v for _, v in daily_vals]
+
+peak_idx = int(np.argmax(day_means))
+bar_colors = ["royalblue"] * len(day_labels)
+bar_colors[peak_idx] = "darkred"
+
+fig, ax = plt.subplots(figsize=(10, 6))
+bars = ax.bar(day_labels, day_means, color=bar_colors)
+
+for bar in bars:
+    yval = bar.get_height()
+    ax.text(
+        bar.get_x() + bar.get_width() / 2,
+        yval * 0.8,
+        f"{yval:.1f}",
+        ha="center",
+        va="center",
+        color="white",
+        fontsize=10,
+        fontweight="bold",
+    )
+
+ax.set_xlabel("Date", fontsize=12)
+ax.set_ylabel("Mean Precipitation (mm)", fontsize=12)
+ax.set_title(
+    "Storm Kristin — Daily Mean Precipitation Across Reporting Stations\n"
+    f"Portugal Region, {date_start.year}",
+    fontsize=14,
+)
+plt.xticks(fontsize=10)
+plt.yticks(fontsize=10)
+plt.grid(axis="y", linestyle="--", alpha=0.7)
+plt.tight_layout()
+plt.show()
 ```
