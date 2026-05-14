@@ -63,6 +63,14 @@ uv run python scripts/read_ghcn_daily.py  # Run scripts via uv
 - Platform-aware paths (Windows: `C:/Data/SOA_Weather`, macOS/Linux: `~/Data/SOA_Weather`)
 - Configurable via `SOA_WEATHER_DATA` environment variable
 
+## File Path Conventions
+
+- Always use `pathlib.Path` — never hardcode strings with `\\` or `os.path.join`
+- Use forward slashes in string literals (e.g. `"data/shapefile/rivers.shp"`) — they work on Windows too
+- Anchor script-relative data paths to `Path(__file__).parent`, not the current working directory
+- Do not use platform-specific path separators in config files (YAML, TOML, etc.); forward slashes only
+- Scripts that run on multiple platforms must not assume `Scripts/` vs `bin/` venv layout
+
 ## Data Flow
 
 1. Download GHCN station metadata and country lookup from NOAA
