@@ -89,7 +89,19 @@ obs = clean_ghcn_daily_observations(obs, system="metric")
             on="station_id",
             how="left",
         )
-        .select(["station_id", "station_name", "country_name", "date", "element", "value", "mflag", "qflag", "sflag"])
+        .select(
+            [
+                "station_id",
+                "station_name",
+                "country_name",
+                "date",
+                "element",
+                "value",
+                "mflag",
+                "qflag",
+                "sflag",
+            ]
+        )
         .head(10)
     )
     .tab_header(

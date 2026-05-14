@@ -80,6 +80,7 @@ nav:
       - Data Sources: guide/data-sources.md
       - GHCN-Daily Pipeline: guide/ghcn-daily-pipeline.md
       - Configuration: guide/configuration.md
+      - Best Practices: guide/best-practices.md
   - API Reference:
       - api/index.md
       - soa_weather.main: api/main.md

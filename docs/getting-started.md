@@ -163,7 +163,7 @@ set SOA_WEATHER_DATA=D:\your\data             # Windows
 Use `uv run` to execute scripts inside the managed environment:
 
 ```bash
-uv run python scripts/read_station_data.py
+uv run python scripts/read_ghcn_daily.py
 ```
 
 ## Next Steps

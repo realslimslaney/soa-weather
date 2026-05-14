@@ -1,9 +1,13 @@
-"""Read Copernicus ERA5 Data"""
+"""Download Copernicus ERA5 reanalysis data for Storm Kristin (Jan 2026, Iberian Peninsula)."""
+
+from pathlib import Path
 
 import cdsapi
 
-dataset = "reanalysis-era5-single-levels"
-request = {
+from soa_weather.utils import data_dir
+
+DATASET = "reanalysis-era5-single-levels"
+REQUEST = {
     "product_type": ["reanalysis"],
     "variable": [
         "10m_u_component_of_wind",
@@ -19,36 +23,14 @@ request = {
     "year": ["2026"],
     "month": ["01"],
     "day": ["27", "28", "29", "30", "31"],
-    "time": [
-        "00:00",
-        "01:00",
-        "02:00",
-        "03:00",
-        "04:00",
-        "05:00",
-        "06:00",
-        "07:00",
-        "08:00",
-        "09:00",
-        "10:00",
-        "11:00",
-        "12:00",
-        "13:00",
-        "14:00",
-        "15:00",
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00",
-        "20:00",
-        "21:00",
-        "22:00",
-        "23:00",
-    ],
+    "time": [f"{h:02d}:00" for h in range(24)],
     "data_format": "netcdf",
     "download_format": "unarchived",
-    "area": [45, -15, 35, 5],
+    "area": [45, -15, 35, 5],  # [N, W, S, E] — Iberian Peninsula bounding box
 }
 
-client = cdsapi.Client()
-client.retrieve(dataset, request).download()
+if __name__ == "__main__":
+    output_path: Path = data_dir() / "era5_storm_kristin_jan2026.nc"
+    client = cdsapi.Client()
+    client.retrieve(DATASET, REQUEST).download(output_path)
+    print(f"Downloaded to {output_path}")

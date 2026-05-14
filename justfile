@@ -3,6 +3,8 @@
 set windows-shell := ["powershell", "-NoProfile", "-Command"]
 set dotenv-load
 
+export QUARTO_PYTHON := if os_family() == "windows" { ".venv/Scripts/python.exe" } else { ".venv/bin/python" }
+
 # List available recipes
 default:
     @just --list
@@ -48,5 +50,5 @@ docs-deploy:
 
 # Preview Storm Kristin Quarto report (live reload server)
 storm-kristin:
-    $env:QUARTO_PYTHON = ".venv\Scripts\python.exe"; quarto preview quarto\portugal_storm_kristin.qmd --no-browser --no-watch-inputs
+    quarto preview quarto/portugal_storm_kristin.qmd --no-browser --no-watch-inputs
 
